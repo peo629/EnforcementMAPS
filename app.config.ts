@@ -15,9 +15,9 @@ const APP_BASE_NAME = process.env.EXPO_APP_NAME ?? 'EnforcementMAPS';
 
 export default (): ExpoConfig => ({
   name: `${APP_BASE_NAME}${APP_NAME_SUFFIX[APP_ENV]}`,
-  slug: process.env.EXPO_APP_SLUG ?? 'emaps',
-  owner: 'techcorp-expo-apps',
-  scheme: process.env.EXPO_APP_SLUG ?? 'emaps',
+  slug: process.env.EXPO_APP_SLUG ?? 'enforcement-maps',
+  owner: 'civic-maps',
+  scheme: process.env.EXPO_APP_SLUG ?? 'enforcement-maps',
   version: '1.0.0',
   orientation: 'portrait',
   icon: './assets/images/icon.png',
@@ -74,7 +74,7 @@ export default (): ExpoConfig => ({
     apiBaseUrl: process.env.EXPO_PUBLIC_API_BASE_URL,
     environment: process.env.EXPO_PUBLIC_ENVIRONMENT,
     eas: {
-      projectId: process.env.EAS_PROJECT_ID
+      projectId: process.env.EAS_PROJECT_ID ?? 'c69eeb3a-1e1f-45c5-bb7e-c81917e47e86'
     }
   }
 });
