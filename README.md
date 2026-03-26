@@ -314,4 +314,3 @@ Use this checklist when deploying for the first time:
 - [ ] Run `eas build --platform android --profile development` for first test build
 - [ ] Verify the APK connects to your API server and authenticates successfully
 - [ ] Run `eas build --platform android --profile production` for production build
-# EnforcementMAPS
