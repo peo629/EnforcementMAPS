@@ -13,7 +13,8 @@
         "EXPO_PUBLIC_API_BASE_URL": "",
         "EXPO_PUBLIC_DOMAIN": "",
         "EXPO_PUBLIC_ENVIRONMENT": "development",
-        "APP_ENV": "development"
+        "APP_ENV": "development",
+        "GOOGLE_MAPS_API_KEY": "AIzaSyCkhndYKPYh7EB7G0hLrQboZQEO9C7B9LQ"
       },
       "android": {
         "buildType": "apk"
@@ -30,7 +31,8 @@
         "EXPO_PUBLIC_API_BASE_URL": "",
         "EXPO_PUBLIC_DOMAIN": "",
         "EXPO_PUBLIC_ENVIRONMENT": "preview",
-        "APP_ENV": "preview"
+        "APP_ENV": "preview",
+        "GOOGLE_MAPS_API_KEY": "AIzaSyCkhndYKPYh7EB7G0hLrQboZQEO9C7B9LQ"
       },
       "android": {
         "buildType": "apk"
@@ -45,7 +47,8 @@
         "EXPO_PUBLIC_API_BASE_URL": "",
         "EXPO_PUBLIC_DOMAIN": "",
         "EXPO_PUBLIC_ENVIRONMENT": "production",
-        "APP_ENV": "production"
+        "APP_ENV": "production",
+        "GOOGLE_MAPS_API_KEY": "AIzaSyCkhndYKPYh7EB7G0hLrQboZQEO9C7B9LQ"
       },
       "android": {
         "buildType": "app-bundle"
