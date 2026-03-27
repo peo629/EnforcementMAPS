@@ -17,11 +17,13 @@
         "GOOGLE_MAPS_API_KEY": "AIzaSyCkhndYKPYh7EB7G0hLrQboZQEO9C7B9LQ"
       },
       "android": {
-        "buildType": "apk"
+        "buildType": "apk",
+        "image": "latest"
       },
       "ios": {
         "simulator": true,
-        "resourceClass": "m-medium"
+        "resourceClass": "m-medium",
+        "image": "latest"
       }
     },
     "preview": {
@@ -35,10 +37,12 @@
         "GOOGLE_MAPS_API_KEY": "AIzaSyCkhndYKPYh7EB7G0hLrQboZQEO9C7B9LQ"
       },
       "android": {
-        "buildType": "apk"
+        "buildType": "apk",
+        "image": "latest"
       },
       "ios": {
-        "resourceClass": "m-medium"
+        "resourceClass": "m-medium",
+        "image": "latest"
       }
     },
     "production": {
@@ -51,10 +55,12 @@
         "GOOGLE_MAPS_API_KEY": "AIzaSyCkhndYKPYh7EB7G0hLrQboZQEO9C7B9LQ"
       },
       "android": {
-        "buildType": "app-bundle"
+        "buildType": "app-bundle",
+        "image": "latest"
       },
       "ios": {
-        "resourceClass": "m-medium"
+        "resourceClass": "m-medium",
+        "image": "latest"
       }
     }
   },
