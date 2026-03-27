@@ -1,71 +1,78 @@
 ---
-title: Zello SDK Overview
-scope: architecture
-version: "2.0.1"
-sdk_package: "@zelloptt/react-native-zello-sdk"
-native_android_sdk: "com.zello:sdk:1.0.+"
-last_reviewed: "2026-03-27"
+title: Zello SDK — Integration Overview
+scope: architecture, feature-map, project-alignment
+sdk: "@zelloptt/react-native-zello-sdk@2.0.1"
+platform: EnforcementMAPS (Expo 54 / React Native 0.81)
+updated: 2026-03-27
 ---
 
-# Zello SDK — Overview
+# Zello SDK — Integration Overview
 
-## What Is Zello SDK?
+## Purpose
 
-Zello SDK embeds **push-to-talk (PTT)** voice communication directly into a custom application. It provides real-time half-duplex voice, rich messaging (text, image, location, alert), channels, dispatch, emergency mode, and group conversations — all backed by the **Zello Work** infrastructure.
+Integrate Zello Work push-to-talk (PTT) into the EnforcementMAPS field
+officer application so patrol officers, supervisors, and dispatch can
+communicate via live voice, text, image, location, and alert messages
+without leaving the app.
 
-## Supported Platforms
+## SDK Identity
 
-| Platform | Package | Min Version |
-|---|---|---|
-| React Native (wrapper) | `@zelloptt/react-native-zello-sdk` | RN 0.74+ |
-| Android (native) | `com.zello:sdk:1.0.+` | API 21 (Android 5.0) |
-| iOS (native) | via CocoaPods | iOS 15+ |
-
-> **This documentation targets Android integration via React Native.**
-
-## Architecture
-
-```
-┌─────────────────────────────────────┐
-│  React Native (TypeScript / JS)     │
-│  @zelloptt/react-native-zello-sdk   │
-├─────────────────────────────────────┤
-│  Native Bridge (Kotlin / Java)      │
-│  Hilt Dependency Injection          │
-├─────────────────────────────────────┤
-│  Zello Android SDK (AAR)            │
-│  Foreground Service · Audio Engine  │
-├─────────────────────────────────────┤
-│  Zello Work Servers (Cloud)         │
-│  AES-256 · TLS · WebSocket          │
-└─────────────────────────────────────┘
-```
+| Field | Value |
+|-------|-------|
+| Package | `@zelloptt/react-native-zello-sdk` |
+| Version | 2.0.1 |
+| Native engine | Zello Android SDK (AAR via Maven) |
+| Licence | Proprietary — requires Zello Work subscription |
+| Source | <https://github.com/zelloptt/react-native-zello-sdk> |
 
 ## Feature Matrix
 
-| Feature | SDK Support |
-|---|---|
-| PTT Voice Messages | ✅ |
-| Text Messages | ✅ |
-| Image Messages | ✅ |
-| Location Messages | ✅ |
-| Alert Messages | ✅ |
-| Channels | ✅ |
-| Group Conversations | ✅ |
-| Dispatch Channels | ✅ |
-| Emergency Mode | ✅ |
-| Message History | ✅ |
-| Push Notifications (FCM) | ✅ |
-| Foreground Service | ✅ |
-| Contact Muting | ✅ |
-| Status Management | ✅ |
+| Capability | SDK Method | EnforcementMAPS Touchpoint |
+|------------|-----------|---------------------------|
+| Live PTT voice | `Zello.send()` / `Zello.stopSending()` | New `src/features/zello/` module |
+| Text messages | `Zello.sendText()` | Channel/contact chat |
+| Image messages | `Zello.sendImage()` | Attach photo evidence |
+| Location sharing | `Zello.sendLocation()` | Extends `expo-location` usage |
+| Alert messages | `Zello.sendAlert()` | Emergency pings |
+| Emergency mode | `Zello.startEmergency()` | Maps to Code21 dispatch flow |
+| Channel management | `Zello.connectChannel()` | Patrol zone channels |
+| Contact presence | `onContactsChanged` event | Augments existing presence system |
+| History playback | `Zello.playHistory()` | Review missed transmissions |
+| Group conversations | `Zello.createGroupConversation()` | Ad-hoc officer groups |
 
-## Key Resources
+## Integration Into Existing Architecture
 
-| Resource | URL |
-|---|---|
-| Official Docs | <https://sdk.zello.com/> |
-| React Native SDK Repo | <https://github.com/zelloptt/react-native-zello-sdk> |
-| Android SDK Example | <https://github.com/zelloptt/zello-android-sdk-example> |
-| Android API Reference | <https://developers.zello.com/sdk/v2.0/android/> |
-| npm Package | `@zelloptt/react-native-zello-sdk` |
+The Zello feature follows the established project structure:
+
+```
+src/features/zello/
+  ├── api/               # Zello provisioning API calls (if needed)
+  ├── components/        # PTT button, channel list, message UI
+  ├── hooks/             # useZello, useZelloAuth, useZelloChannels
+  ├── domain.ts          # Zello types and business logic
+  └── zello-provider.tsx # Context provider (mounted in app/_layout.tsx)
+```
+
+**Provider chain** — `ZelloProvider` mounts inside the existing
+`AuthProvider` → `QueryClientProvider` hierarchy so it can react to
+auth state changes and auto-connect/disconnect Zello when the officer
+logs in/out.
+
+## Key Integration Points
+
+| Existing Module | Integration |
+|-----------------|-------------|
+| `src/shared/infra/auth-context.tsx` | Trigger Zello `connect()` on login, `disconnect()` on logout |
+| `src/shared/hooks/usePushNotifications.ts` | FCM token sharing — Zello needs its own FCM handling alongside Expo Push |
+| `src/features/code21/` | Map Zello emergency mode to Code21 dispatch acknowledgement |
+| `src/features/presence/` | Augment heartbeat presence with Zello contact online status |
+| `app.config.ts` | Add Zello permissions and config plugin |
+| `metro.config.js` | No changes required — SDK resolves from `node_modules` |
+
+## Official Resources
+
+- SDK docs: <https://sdk.zello.com>
+- RN installation: <https://sdk.zello.com/installation-guides/react-native-installation-guide>
+- RN example app: <https://sdk.zello.com/sdk-example-apps/example-apps-react-native>
+- Android SDK repo: <https://github.com/zelloptt/zello-android-client-sdk>
+- React Native SDK repo: <https://github.com/zelloptt/react-native-zello-sdk>

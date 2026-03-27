@@ -1,54 +1,59 @@
 ---
-title: Installation
-scope: setup
-package: "@zelloptt/react-native-zello-sdk"
-version: "2.0.1"
-last_reviewed: "2026-03-27"
+title: Package Installation
+scope: dependencies, pnpm, peer-deps
+sdk: "@zelloptt/react-native-zello-sdk@2.0.1"
+platform: EnforcementMAPS (Expo 54 / React Native 0.81)
+updated: 2026-03-27
 ---
 
-# Installation
+# Package Installation
 
-## 1. Install the npm Package
+## Install the SDK
 
-```bash
-# yarn
-yarn add @zelloptt/react-native-zello-sdk
-
-# npm
-npm install @zelloptt/react-native-zello-sdk
-```
-
-The current version is **2.0.1**. SDK v2.0.0+ is **required** for Zello server communication (mandatory since Aug 12, 2025).
-
-## 2. Why No Auto-linking?
-
-The Zello Android SDK uses **Hilt** dependency injection, which requires Gradle plugin configuration at the project level. Standard React Native auto-linking cannot apply project-level Gradle changes. **Manual native configuration is required** — see `03-android-native-config.md`.
-
-## 3. Peer Dependencies
-
-The SDK declares the following peer dependencies:
-
-| Package | Version |
-|---|---|
-| `react` | ≥ 18.2.0 |
-| `react-native` | ≥ 0.74.x |
-
-## 4. Recommended Companion Packages
-
-These are not required by the SDK but are used in the official example app and recommended for a complete PTT experience:
-
-| Package | Purpose |
-|---|---|
-| `react-native-permissions` | Runtime permission prompts (mic, location) |
-| `@react-native-firebase/app` | Firebase core (required for FCM push) |
-| `react-native-toast-message` | User notifications / feedback |
-
-## 5. Verify Installation
-
-After native config (next doc), run:
+From the project root (where `package.json` lives):
 
 ```bash
-cd android && ./gradlew assembleDebug
+pnpm add @zelloptt/react-native-zello-sdk
 ```
 
-A successful build confirms the Zello SDK AAR resolved from the Maven repository.
+## Peer Dependencies
+
+The SDK requires these peers — all already present in EnforcementMAPS:
+
+| Peer Dependency | Required | Installed |
+|-----------------|----------|-----------|
+| `react` ≥ 18 | ✅ | 19.1.0 |
+| `react-native` ≥ 0.73 | ✅ | 0.81.5 |
+
+## Firebase Dependencies
+
+For FCM push integration (required for background PTT wake):
+
+```bash
+pnpm add @react-native-firebase/app @react-native-firebase/messaging
+```
+
+> **Note:** `@react-native-firebase/*` packages are native modules.
+> They require an EAS **dev build** — they will not work in Expo Go.
+> The project already uses dev builds via `eas.json`.
+
+## Verify Lock File
+
+After installation, confirm the lock file updated cleanly:
+
+```bash
+pnpm install --frozen-lockfile
+```
+
+## What NOT to Install
+
+- Do **not** install `zello-android-client-sdk` separately — the React Native
+  wrapper bundles the native AAR automatically.
+- Do **not** install `expo-notifications` FCM plugins — Zello handles its own
+  FCM channel. See [09-background-push.md](./09-background-push.md).
+
+## Post-Install
+
+Proceed to:
+1. [03-android-native-config.md](./03-android-native-config.md) — Expo config plugin setup
+2. [04-permissions.md](./04-permissions.md) — Required permissions

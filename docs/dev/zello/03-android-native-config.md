@@ -1,118 +1,101 @@
 ---
 title: Android Native Configuration
-scope: android-setup
-last_reviewed: "2026-03-27"
+scope: expo-config-plugin, gradle, firebase
+sdk: "@zelloptt/react-native-zello-sdk@2.0.1"
+platform: EnforcementMAPS (Expo 54 / React Native 0.81)
+updated: 2026-03-27
 ---
 
 # Android Native Configuration
 
-The Zello SDK requires several native-level changes that cannot be applied by React Native auto-linking.
+## Expo Managed Workflow
 
-## 1. Project-Level `build.gradle`
+EnforcementMAPS uses Expo's managed workflow with EAS builds.
+**Do not manually edit** `android/` files — they are generated at build time.
+All native config goes through `app.config.ts` and Expo config plugins.
 
-Add the Zello Maven repository and the Hilt Gradle plugin:
+## app.config.ts Changes
 
-```groovy
-// android/build.gradle
-buildscript {
-    repositories {
-        google()
-        mavenCentral()
-        maven {
-            url = uri("https://zello-sdk.s3.amazonaws.com/android/latest")
-        }
+Add the Firebase and Zello plugins to the existing `plugins` array:
+
+```typescript
+plugins: [
+  'expo-router',
+  'expo-secure-store',
+  [
+    'expo-notifications',
+    {
+      defaultChannel: 'default',
+    },
+  ],
+  // ── Zello PTT ──────────────────────────────────────────────
+  '@react-native-firebase/app',
+  // Zello SDK auto-links via React Native autolinking — no
+  // explicit plugin entry needed for the SDK itself.
+],
+```
+
+## Firebase Setup
+
+### google-services.json
+
+Place the Firebase config file at the project root:
+
+```
+EnforcementMAPS/
+  google-services.json   ← Android Firebase config
+  app.config.ts
+  package.json
+```
+
+Add the path in `app.config.ts` under the `android` block:
+
+```typescript
+android: {
+  package: 'au.melbourne.patrolzones',
+  googleServicesFile: './google-services.json',
+  // ... existing config
+},
+```
+
+### EAS Build Environment
+
+Ensure `eas.json` includes `google-services.json` in the build:
+
+```json
+{
+  "build": {
+    "development": {
+      "env": {
+        "GOOGLE_SERVICES_JSON": "./google-services.json"
+      }
     }
-    dependencies {
-        classpath "com.android.tools.build:gradle:8.5.1"
-        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.24"
-        classpath "com.google.dagger:hilt-android-gradle-plugin:2.51"
-    }
-}
-
-allprojects {
-    repositories {
-        google()
-        mavenCentral()
-        maven {
-            url = uri("https://zello-sdk.s3.amazonaws.com/android/latest")
-        }
-    }
+  }
 }
 ```
 
-> The Zello Maven repo (`https://zello-sdk.s3.amazonaws.com/android/latest`) is required. The AAR is not published to Maven Central.
+## Zello Maven Repository
 
-## 2. App-Level `build.gradle`
+The React Native Zello SDK's `android/build.gradle` automatically adds
+the Zello Maven repo (`https://zello.jfrog.io/...`). In Expo managed
+workflow, this is handled by autolinking at EAS build time. No manual
+Gradle changes are needed.
 
-Apply the Hilt and kapt plugins, then add the Zello SDK dependency:
+## Hilt / Dagger Dependency Injection
 
-```groovy
-// android/app/build.gradle
-apply plugin: "com.android.application"
-apply plugin: "kotlin-android"
-apply plugin: "com.google.dagger.hilt.android"
-apply plugin: "kotlin-kapt"
+The Zello Android SDK uses Hilt internally. The React Native wrapper
+handles this — **do not** add Hilt plugins to the project. If build
+errors reference `dagger.hilt`, see [13-troubleshooting.md](./13-troubleshooting.md).
 
-android {
-    compileSdk 34
-    defaultConfig {
-        minSdk 21
-        targetSdk 34
-    }
-}
+## Build Verification
 
-dependencies {
-    implementation "com.zello:sdk:1.0.+"
-    implementation "com.google.dagger:hilt-android:2.51"
-    kapt "com.google.dagger:hilt-compiler:2.51"
-}
-```
-
-## 3. Hilt Application Class
-
-Create or update your `MainApplication` to annotate with `@HiltAndroidApp`:
-
-```kotlin
-// android/app/src/main/java/com/yourapp/MainApplication.kt
-package com.yourapp
-
-import android.app.Application
-import com.facebook.react.ReactApplication
-import com.facebook.react.defaults.DefaultReactNativeHost
-import dagger.hilt.android.HiltAndroidApp
-
-@HiltAndroidApp
-class MainApplication : Application(), ReactApplication {
-    // ... standard React Native host configuration
-}
-```
-
-> **Critical:** The `@HiltAndroidApp` annotation is mandatory. Without it, the Zello SDK will crash at runtime with a Hilt injection error.
-
-## 4. Hilt Configuration
-
-In the module-level build.gradle (or the Zello SDK module):
-
-```groovy
-hilt {
-    enableAggregatingTask = true
-}
-```
-
-## 5. React Native New Architecture
-
-If using the New Architecture (`newArchEnabled=true`):
-
-```groovy
-if (isNewArchitectureEnabled()) {
-    apply plugin: "com.facebook.react"
-}
-```
-
-## 6. Build Verification
+After configuration, create a dev build to verify native linking:
 
 ```bash
-cd android && ./gradlew assembleDebug --console=plain
+eas build --platform android --profile development
 ```
 
-Confirm zero Hilt/Dagger errors and successful AAR resolution from the Zello S3 Maven repo.
+Watch for:
+- ✅ `@zelloptt/react-native-zello-sdk` in autolinking output
+- ✅ `@react-native-firebase/app` resolved
+- ❌ Any Hilt/Dagger annotation processor errors → see troubleshooting

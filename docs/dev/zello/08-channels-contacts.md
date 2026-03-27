@@ -1,104 +1,99 @@
 ---
-title: Channels & Contacts
-scope: contacts
-last_reviewed: "2026-03-27"
+title: Channels, Contacts & Group Conversations
+scope: channel-management, user-provisioning, groups
+sdk: "@zelloptt/react-native-zello-sdk@2.0.1"
+platform: EnforcementMAPS (Expo 54 / React Native 0.81)
+updated: 2026-03-27
 ---
 
-# Channels & Contacts
+# Channels, Contacts & Group Conversations
 
-## Contact Types
+## Channel Strategy for EnforcementMAPS
 
-All communication targets implement `ZelloContact`:
+Map Zello channels to the patrol zone structure:
 
-| Type | Description |
-|---|---|
-| `ZelloUser` | Individual user (1:1 messaging) |
-| `ZelloChannel` | Multi-user channel (provisioned via console) |
-| `ZelloDispatchChannel` | Special channel with dispatcher/caller roles |
-| `ZelloGroupConversation` | Ad-hoc group created by end users |
+| Zello Channel | Purpose |
+|---------------|---------|
+| `dispatch` | Central dispatch — all officers monitor |
+| `zone-north` | North patrol zone officers |
+| `zone-south` | South patrol zone officers |
+| `zone-east` | East patrol zone officers |
+| `zone-west` | West patrol zone officers |
+| `supervisors` | Supervisor-only channel |
 
-## Accessing Contacts
+Channels are created in the **Zello Work admin console**, not in the SDK.
 
-```typescript
-// After successful connection:
-const users = Zello.users;           // ZelloUser[]
-const channels = Zello.channels;     // ZelloChannel[]
-const groups = Zello.groupConversations; // ZelloGroupConversation[]
-const recents = Zello.recents;       // ZelloRecentEntry[]
-
-// Lookup by name
-const user = Zello.getUser('officer2');
-const channel = Zello.getChannel('Patrol-Alpha');
-```
-
-## Channel Operations
+## Connecting to Channels
 
 ```typescript
-// Connect to a channel (start receiving messages)
-Zello.connectChannel(channel);
+// Auto-connect to dispatch on login
+Zello.connectChannel('dispatch');
 
-// Disconnect from a channel
-Zello.disconnectChannel(channel);
+// Connect to assigned zone channel
+const zoneChannel = `zone-${user.assignedZone.toLowerCase()}`;
+Zello.connectChannel(zoneChannel);
 ```
 
-### Channel Status
+## Listing Channels and Contacts
 
-| Status | Description |
-|---|---|
-| `online` | Connected, sending/receiving |
-| `connecting` | Connection in progress |
-| `offline` | Not connected |
+```typescript
+Zello.Listener.on('onChannelsChanged', (channels) => {
+  // channels: ZelloChannel[]
+  // Each has: name, status, usersOnline
+});
+
+Zello.Listener.on('onContactsChanged', (contacts) => {
+  // contacts: ZelloContact[]
+  // Each has: name, displayName, status, isMuted
+});
+```
+
+## Muting
+
+Officers can mute channels they are monitoring but not actively using:
+
+```typescript
+Zello.muteContact(channel); // Mute a channel
+Zello.unmuteContact(channel); // Unmute
+```
 
 ## Group Conversations
 
-Group conversations are ad-hoc multi-user channels created at runtime:
+Ad-hoc groups for multi-officer operations (e.g., a coordinated
+enforcement action):
 
 ```typescript
-// Create a new group
-Zello.createGroupConversation([user1, user2], 'Field Team Alpha');
+const group = await Zello.createGroupConversation([
+  officer_101,
+  officer_205,
+  officer_629,
+]);
 
-// Add users to existing group
-Zello.addUsersToGroupConversation(conversation, [user3]);
-
-// Rename
-Zello.renameGroupConversation(conversation, 'New Name');
-
-// Leave
-Zello.leaveGroupConversation(conversation);
+// Send PTT to the group
+Zello.send(group);
 ```
 
-## Selected Contact
+## User Provisioning
 
-Track which contact the user is currently interacting with:
+Officers must exist in the Zello Work network before they can connect.
+Two approaches:
+
+1. **Manual** — Admin creates users in Zello Work console.
+2. **API provisioning** — Backend (`maps-api`) calls the Zello
+   provisioning API to create/update users when officers are registered
+   in the CIVIC MAPS system.
+
+See Zello docs: <https://sdk.zello.com/core-concepts/user-+-channel-provisioning>
+
+## Integration With Presence
+
+The existing `presence.api.ts` tracks officer online status via
+heartbeats. Zello contact status can augment this:
 
 ```typescript
-Zello.setSelectedContact(contact);
-// Zello.selectedContact — current selection
+// In the Zello provider or a dedicated hook
+Zello.Listener.on('onContactsChanged', (contacts) => {
+  // Cross-reference with app's officer roster
+  // Update presence indicators on the patrol map
+});
 ```
-
-## Contact Muting
-
-```typescript
-Zello.muteContact(contact);
-Zello.unmuteContact(contact);
-// Muted contacts: messages still arrive in history but don't play live
-```
-
-## User Properties
-
-| Property | Type | Description |
-|---|---|---|
-| `name` | `string` | Username |
-| `displayName` | `string` | Display name |
-| `status` | `Status` | `online`, `offline`, `busy`, `standby` |
-| `isMuted` | `boolean` | Mute state |
-| `customStatusText` | `string?` | Custom status |
-| `profilePictureUrl` | `string?` | Profile picture URL |
-| `supportedFeatures` | `SupportedFeatures` | Feature flags |
-
-## Events
-
-| Event | Trigger |
-|---|---|
-| `onContactListUpdated` | Any change to users, channels, or groups |
-| `onSelectedContactChanged` | Selected contact changed |

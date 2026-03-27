@@ -1,85 +1,111 @@
 ---
 title: Voice Messaging (PTT)
-scope: voice
-last_reviewed: "2026-03-27"
+scope: send, receive, playback, UI
+sdk: "@zelloptt/react-native-zello-sdk@2.0.1"
+platform: EnforcementMAPS (Expo 54 / React Native 0.81)
+updated: 2026-03-27
 ---
 
 # Voice Messaging (PTT)
 
-Push-to-talk voice is the core Zello feature. Audio is streamed in real-time — half-duplex (one speaker at a time).
+## Core Flow
 
-## Sending a Voice Message
+1. Officer presses and holds the PTT button → `Zello.send(contact)`
+2. SDK captures audio from microphone → streams to Zello servers
+3. Officer releases → `Zello.stopSending()`
+4. Recipients hear audio in real time
+
+## Hook Implementation
 
 ```typescript
-import Zello from '@zelloptt/react-native-zello-sdk';
+// src/features/zello/hooks/useZelloPTT.ts
+import { useState, useCallback } from 'react';
+import Zello, { ZelloContact } from '@zelloptt/react-native-zello-sdk';
+import { requestZelloPermissions } from './useZelloPermissions';
 
-// Start transmitting to a contact (user or channel)
-Zello.startVoiceMessage(contact);
+export function useZelloPTT() {
+  const [isSending, setIsSending] = useState(false);
+  const [isReceiving, setIsReceiving] = useState(false);
 
-// Stop transmitting
-Zello.stopVoiceMessage();
+  const startSending = useCallback(async (contact: ZelloContact) => {
+    const granted = await requestZelloPermissions();
+    if (!granted) return;
+    Zello.send(contact);
+    setIsSending(true);
+  }, []);
+
+  const stopSending = useCallback(() => {
+    Zello.stopSending();
+    setIsSending(false);
+  }, []);
+
+  return { isSending, isReceiving, startSending, stopSending };
+}
 ```
 
-The `contact` parameter is a `ZelloContact` object obtained from `Zello.users`, `Zello.channels`, or `Zello.groupConversations`.
+## PTT Button Component
 
-## Outgoing Voice Events
+Use `onPressIn` / `onPressOut` for press-and-hold behaviour:
 
-| Event | Fired When |
-|---|---|
-| `onOutgoingVoiceMessageConnecting` | Transmission is being set up |
-| `onOutgoingVoiceMessageStarted` | Microphone is live, audio streaming |
-| `onOutgoingVoiceMessageStopped` | Transmission ended (success or error) |
+```tsx
+// src/features/zello/components/PTTButton.tsx
+import { Pressable, Text, StyleSheet } from 'react-native';
+import * as Haptics from 'expo-haptics';
 
-```typescript
-Zello.on('outgoingVoiceMessageConnecting', (message) => {
-  // Show "connecting" indicator
-});
+interface PTTButtonProps {
+  contact: ZelloContact;
+  isSending: boolean;
+  onPressIn: () => void;
+  onPressOut: () => void;
+}
 
-Zello.on('outgoingVoiceMessageStarted', (message) => {
-  // Show "transmitting" indicator
-});
-
-Zello.on('outgoingVoiceMessageStopped', (error) => {
-  // Hide indicator, check error
-});
+export function PTTButton({ isSending, onPressIn, onPressOut }: PTTButtonProps) {
+  return (
+    <Pressable
+      onPressIn={() => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        onPressIn();
+      }}
+      onPressOut={onPressOut}
+      style={[styles.button, isSending && styles.active]}
+    >
+      <Text style={styles.label}>
+        {isSending ? 'TRANSMITTING' : 'PUSH TO TALK'}
+      </Text>
+    </Pressable>
+  );
+}
 ```
 
-## Receiving a Voice Message
+## Receiving Messages
 
-Incoming voice messages play automatically through the device speaker. The SDK manages audio routing.
-
-| Event | Fired When |
-|---|---|
-| `onIncomingVoiceMessageStarted` | Incoming audio begins playing |
-| `onIncomingVoiceMessageStopped` | Incoming audio finished |
+Register an `onIncomingVoiceMessage` listener via `Zello.Listener`:
 
 ```typescript
-Zello.on('incomingVoiceMessageStarted', (message) => {
+Zello.Listener.on('onIncomingVoiceMessage', (message) => {
   // message.contact — who is speaking
-  // message.channelUser — if from a channel, the specific user
+  // message.channel — which channel (if channel message)
+  setIsReceiving(true);
 });
 
-Zello.on('incomingVoiceMessageStopped', () => {
-  // Audio finished
+Zello.Listener.on('onIncomingVoiceMessageStopped', () => {
+  setIsReceiving(false);
 });
 ```
 
 ## History Playback
 
+Replay the last message on a channel:
+
 ```typescript
-// Retrieve history for a contact
-const history = Zello.getHistory(contact, 50);
-
-// Play a voice history entry
-Zello.playHistoryMessage(voiceHistoryMessage);
-
-// Stop playback
-Zello.stopHistoryMessagePlayback();
+Zello.playHistory(historyMessage);
+Zello.stopPlayback(); // To cancel
 ```
 
-## PTT UX Guidelines
+## UX Guidelines
 
-1. **Press-and-hold** pattern: Start voice on press down, stop on release.
-2. Show clear visual feedback for transmitting vs receiving states.
-3. Only one outgoing voice message can be active at a time.
-4. If another user is already transmitting on a channel, `startVoiceMessage` will fail.
+- Provide **visual + haptic feedback** during transmit (the app already
+  uses `expo-haptics`).
+- Show a "receiving" indicator with the sender's identity.
+- Disable the PTT button when `isReceiving` is true (half-duplex).
+- Display transmission duration for officer awareness.

@@ -1,91 +1,106 @@
 ---
-title: Rich Messaging
-scope: messaging
-last_reviewed: "2026-03-27"
+title: Rich Messaging (Text, Image, Location, Alert)
+scope: non-voice-message-types
+sdk: "@zelloptt/react-native-zello-sdk@2.0.1"
+platform: EnforcementMAPS (Expo 54 / React Native 0.81)
+updated: 2026-03-27
 ---
 
 # Rich Messaging
 
-Beyond voice, the Zello SDK supports text, image, location, and alert messages.
+## Message Types
+
+| Type | Method | Use Case |
+|------|--------|----------|
+| Text | `Zello.sendText(contact, text)` | Quick status updates, notes |
+| Image | `Zello.sendImage(contact, uri)` | Photo evidence, scene photos |
+| Location | `Zello.sendLocation(contact)` | Share current GPS position |
+| Alert | `Zello.sendAlert(contact, text, level)` | Emergency pings, priority alerts |
 
 ## Text Messages
 
 ```typescript
-Zello.sendText('Hello from EnforcementMAPS', contact);
+await Zello.sendText(contact, 'Proceeding to Section 4B');
 ```
 
-| Event | Description |
-|---|---|
-| `onOutgoingTextMessageSent` | Text delivered successfully |
-| `onOutgoingTextMessageSendFailed` | Delivery failed |
-| `onIncomingTextMessage` | Text received from another user |
+Listen for incoming text:
 
 ```typescript
-Zello.on('incomingTextMessage', (message) => {
-  // message.text — the message content
-  // message.contact — the sender
-  // message.channelUser — sender in channel context
+Zello.Listener.on('onIncomingTextMessage', (event) => {
+  // event.contact, event.text, event.channel
 });
 ```
 
 ## Image Messages
 
+The app can use the device camera or gallery. The SDK accepts a
+local file URI:
+
 ```typescript
-// imageData: byte array of the image
-Zello.sendImage(imageData, contact);
+// From expo-image-picker or camera capture
+const imageUri = 'file:///path/to/photo.jpg';
+await Zello.sendImage(contact, imageUri);
 ```
 
-| Event | Description |
-|---|---|
-| `onOutgoingImageMessageSent` | Image delivered |
-| `onOutgoingImageMessageSendFailed` | Delivery failed |
-| `onIncomingImageMessage` | Image received (includes thumbnail + full image) |
-
-## Location Messages
+Incoming images:
 
 ```typescript
-Zello.sendLocation(contact);
-```
-
-The SDK obtains the device location automatically. Requires `ACCESS_FINE_LOCATION` permission.
-
-| Event | Description |
-|---|---|
-| `onOutgoingLocationMessageSent` | Location delivered |
-| `onOutgoingLocationMessageSendFailed` | Delivery failed |
-| `onIncomingLocationMessage` | Location received (lat, lng, accuracy, address) |
-
-```typescript
-Zello.on('incomingLocationMessage', (message) => {
-  // message.latitude, message.longitude
-  // message.accuracy, message.address
+Zello.Listener.on('onIncomingImageMessage', (event) => {
+  // event.image — image data/URI
+  // event.contact — sender
 });
 ```
 
-## Alert Messages
+## Location Messages
 
-Alerts play a recurring sound until the user acknowledges them. Ideal for urgent notifications.
+Leverages the device GPS. The app already uses `expo-location` —
+Zello's location sharing uses its own internal GPS access:
 
 ```typescript
-Zello.sendAlert('Officer needs assistance', contact);
+await Zello.sendLocation(contact);
 ```
 
-| Event | Description |
-|---|---|
-| `onOutgoingAlertMessageSent` | Alert delivered |
-| `onOutgoingAlertMessageSendFailed` | Delivery failed |
-| `onIncomingAlertMessage` | Alert received |
-
-## Console Settings
-
-Message types can be enabled/disabled at the network level via the Zello Work Administrative Console. Check availability at runtime:
+Incoming locations:
 
 ```typescript
-// Available after connection
-const settings = Zello.consoleSettings;
-// settings.allowTextMessages
-// settings.allowImageMessages
-// settings.allowLocationMessages
-// settings.allowAlertMessages
-// settings.allowGroupConversations
+Zello.Listener.on('onIncomingLocationMessage', (event) => {
+  // event.latitude, event.longitude
+  // event.contact — sender
+});
+```
+
+> **Integration note:** Incoming location messages could be plotted on
+> the existing `react-native-maps` patrol zone map alongside officer
+> markers.
+
+## Alert Messages
+
+High-priority messages that trigger prominent notifications:
+
+```typescript
+// level: 1 (low), 2 (medium), 3 (high)
+await Zello.sendAlert(contact, 'Officer requires assistance', 3);
+```
+
+## Hook Pattern
+
+```typescript
+// src/features/zello/hooks/useZelloMessaging.ts
+import Zello, { ZelloContact } from '@zelloptt/react-native-zello-sdk';
+
+export function useZelloMessaging() {
+  const sendText = (contact: ZelloContact, text: string) =>
+    Zello.sendText(contact, text);
+
+  const sendImage = (contact: ZelloContact, uri: string) =>
+    Zello.sendImage(contact, uri);
+
+  const sendLocation = (contact: ZelloContact) =>
+    Zello.sendLocation(contact);
+
+  const sendAlert = (contact: ZelloContact, text: string, level: number) =>
+    Zello.sendAlert(contact, text, level);
+
+  return { sendText, sendImage, sendLocation, sendAlert };
+}
 ```

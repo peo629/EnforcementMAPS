@@ -1,80 +1,100 @@
 ---
 title: Background Services & Push Notifications
-scope: background
-last_reviewed: "2026-03-27"
+scope: foreground-service, FCM, expo-notifications-coexistence
+sdk: "@zelloptt/react-native-zello-sdk@2.0.1"
+platform: EnforcementMAPS (Expo 54 / React Native 0.81)
+updated: 2026-03-27
 ---
 
 # Background Services & Push Notifications
 
-## Foreground Service
+## Current Push Architecture
 
-The Android SDK includes a **foreground service** that keeps PTT operational when the app is in the background. This is enabled by default.
+EnforcementMAPS uses **Expo Push Tokens** via `expo-notifications`:
+
+```
+Device → Expo Push Service → FCM → Device
+```
+
+`usePushNotifications.ts` registers an Expo Push Token on login and
+sends it to the MAPS API via `presenceService.registerDevice()`.
+
+## Zello Push Architecture
+
+Zello requires **native FCM** for PTT wake-up:
+
+```
+Zello Server → FCM → Device → Zello SDK wakes → Audio stream starts
+```
+
+## Coexistence Strategy
+
+Both systems can share the same Firebase project but handle messages
+independently:
+
+1. **Expo Push** continues using `expo-notifications` with Expo Push
+   Tokens for dispatch alerts (Code21), system notifications.
+2. **Zello FCM** uses `@react-native-firebase/messaging` for PTT
+   wake-up messages.
+
+The key: Zello's FCM messages include a Zello-specific data payload
+that the Zello SDK intercepts. Non-Zello messages pass through to
+`expo-notifications` as before.
+
+### Firebase Messaging Handler
 
 ```typescript
-Zello.configure({
-  enableForegroundService: true,  // default: true
-  enableOfflineMessagePushNotifications: true,
+// src/features/zello/zello-fcm-handler.ts
+import messaging from '@react-native-firebase/messaging';
+
+// Background message handler — must be registered at app root level
+messaging().setBackgroundMessageHandler(async (remoteMessage) => {
+  // Zello SDK automatically intercepts its own messages.
+  // Non-Zello messages fall through to expo-notifications.
+  console.log('[ZELLO-FCM] Background message:', remoteMessage.messageId);
 });
 ```
 
-The foreground service:
-- Shows a persistent notification while active.
-- Prevents the OS from killing the PTT connection.
-- Uses `FOREGROUND_SERVICE_PHONE_CALL` type.
+## Foreground Service
 
-> To disable the foreground service, set `enableForegroundService: false`. The SDK will lose background connectivity.
+On Android, Zello runs a **foreground service** to maintain the audio
+connection. This shows a persistent notification. The SDK manages this
+automatically when connected.
 
-## Push Notifications (Firebase Cloud Messaging)
+### Notification Channel
 
-Push notifications deliver messages when the app is not running. The Zello SDK uses **Firebase Cloud Messaging (FCM)**.
+The SDK creates its own notification channel. Ensure
+`POST_NOTIFICATIONS` permission is granted (see [04-permissions.md](./04-permissions.md)).
 
-### Setup Steps
+## Battery Optimisation
 
-1. **Create a Firebase project** at <https://console.firebase.google.com/>.
-2. **Register your Android app** in the Firebase console.
-3. **Download `google-services.json`** and place it in `android/app/`.
-4. **Add Firebase Gradle dependencies:**
+Instruct officers to **disable battery optimisation** for
+EnforcementMAPS in Android settings. Without this, the OS may kill
+the foreground service during extended patrols.
 
-```groovy
-// android/build.gradle (project level)
-buildscript {
-    dependencies {
-        classpath "com.google.gms:google-services:4.4.0"
-    }
+Add a check on app startup:
+
+```typescript
+import { Linking, Alert } from 'react-native';
+
+function promptBatteryOptimisation() {
+  Alert.alert(
+    'Battery Optimisation',
+    'For reliable PTT, disable battery optimisation for this app.',
+    [
+      { text: 'Open Settings', onPress: () =>
+        Linking.openSettings()
+      },
+      { text: 'Later', style: 'cancel' },
+    ]
+  );
 }
 ```
 
-```groovy
-// android/app/build.gradle
-apply plugin: "com.google.gms.google-services"
+## Key Consideration
 
-dependencies {
-    implementation platform("com.google.firebase:firebase-bom:32.7.0")
-    implementation "com.google.firebase:firebase-messaging"
-}
-```
-
-5. **Install React Native Firebase:**
-
-```bash
-yarn add @react-native-firebase/app @react-native-firebase/messaging
-```
-
-6. **Upload the FCM server key** to the Zello Work Administrative Console under **Management → Developers → Push Notifications**.
-
-### How It Works
-
-```
-App closed → Zello server sends FCM push → Device wakes →
-Notification displayed → User opens app → SDK reconnects →
-Message available in history
-```
-
-## Notification Channel
-
-The Zello SDK registers its own Android notification channel. Customize the notification appearance through the Zello Work console settings if needed.
-
-## Battery Optimization
-
-Advise users to **exclude the app from battery optimization** for reliable background operation:
-- Settings → Battery → Battery Optimization → Your App → Don't Optimize
+- **Do not** replace `expo-notifications` with Firebase messaging for
+  app-level notifications. They serve different purposes.
+- Zello handles its own FCM registration internally after `connect()`.
+- The `google-services.json` file must match the `au.melbourne.patrolzones`
+  package name.

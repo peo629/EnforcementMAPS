@@ -1,96 +1,143 @@
 ---
 title: Troubleshooting
-scope: debugging
-last_reviewed: "2026-03-27"
+scope: build-errors, runtime-issues, expo-specific
+sdk: "@zelloptt/react-native-zello-sdk@2.0.1"
+platform: EnforcementMAPS (Expo 54 / React Native 0.81)
+updated: 2026-03-27
 ---
 
 # Troubleshooting
 
 ## Build Errors
 
-### "Could not resolve com.zello:sdk"
+### Hilt / Dagger annotation processor failure
 
-**Cause:** Zello Maven repository not configured.
-
-**Fix:** Add to both project-level and app-level `build.gradle`:
-```groovy
-maven { url = uri("https://zello-sdk.s3.amazonaws.com/android/latest") }
+```
+error: [Hilt] ProcessedRootSentinel(...)
 ```
 
-### Hilt / Dagger compilation errors
+**Cause:** Zello's native Android SDK uses Hilt. In Expo managed
+workflow, the kapt/ksp annotation processor may not be configured.
 
-**Cause:** Missing Hilt plugin or `@HiltAndroidApp` annotation.
+**Fix:** Create a custom Expo config plugin or use `expo-build-properties`:
 
-**Fix:**
-1. Ensure `apply plugin: "com.google.dagger.hilt.android"` and `apply plugin: "kotlin-kapt"` in app build.gradle.
-2. Annotate `MainApplication` with `@HiltAndroidApp`.
-3. Add `kapt "com.google.dagger:hilt-compiler:2.51"` to dependencies.
+```bash
+pnpm add expo-build-properties
+```
+
+In `app.config.ts`:
+
+```typescript
+[
+  'expo-build-properties',
+  {
+    android: {
+      kotlinVersion: '1.9.24',
+      enableProguardInReleaseBuilds: true,
+    },
+  },
+],
+```
+
+### Maven repository not found
+
+```
+Could not resolve com.zello:zello-sdk
+```
+
+**Fix:** The React Native SDK's `build.gradle` should add the repo
+automatically. If not, use a config plugin to add:
+
+```
+maven { url 'https://zello.jfrog.io/artifactory/maven/' }
+```
 
 ### Duplicate class errors
 
-**Cause:** Version conflicts between Hilt/Dagger transitive dependencies.
+```
+Duplicate class kotlin.collections.jdk8.*
+```
 
-**Fix:** Force consistent versions:
-```groovy
-configurations.all {
-    resolutionStrategy.force "com.google.dagger:hilt-android:2.51"
-}
+**Fix:** Add to `app.config.ts` via `expo-build-properties`:
+
+```typescript
+android: {
+  packagingOptions: {
+    pickFirst: ['**/kotlin/**'],
+  },
+},
 ```
 
 ## Runtime Errors
 
-### "SDK not started" / INVALID_STATE
+### "Zello is not connected" when sending PTT
 
-**Cause:** Calling `connect()` before `start()`.
+**Cause:** `Zello.send()` called before `onConnected` event fired.
 
-**Fix:** Ensure `Zello.start()` is called first (typically in `App.tsx` or `useEffect` on mount).
+**Fix:** Guard PTT actions on connection state in `useZelloStatus()` hook.
 
-### Voice message fails to start
+### No audio on incoming message
 
-**Cause:** `RECORD_AUDIO` permission not granted.
+**Cause:** Audio focus not acquired, or volume at zero.
 
-**Fix:** Request runtime permission before calling `startVoiceMessage()`.
+**Fix:** Check device volume. The SDK manages audio focus, but other
+apps (especially other `expo-notifications` sounds) may interfere.
 
-### Location message fails
+### Microphone permission denied silently
 
-**Cause:** `ACCESS_FINE_LOCATION` not granted or location services disabled.
+**Cause:** On Android 11+, if the user denies twice, the OS stops
+showing the prompt.
 
-**Fix:** Request permission and verify device GPS is enabled.
+**Fix:** Detect `NEVER_ASK_AGAIN` state and direct the user to
+Settings → App Permissions.
 
-### Push notifications not received
+## Expo-Specific Issues
 
-**Checklist:**
-1. `google-services.json` present in `android/app/`.
-2. FCM server key uploaded to Zello Work console.
-3. `POST_NOTIFICATIONS` permission granted (Android 13+).
-4. App not battery-optimized (excluded from Doze).
+### "Cannot use native module in Expo Go"
 
-## Debugging Tips
+**Expected.** The Zello SDK is a native module and requires an EAS dev
+build. It will **never** work in Expo Go.
 
-### Enable Problem Reports
-
-```typescript
-Zello.submitProblemReport();
+```bash
+eas build --platform android --profile development
 ```
 
-Sends diagnostic logs to Zello support. Contact Zello with a description of the issue after submitting.
+### Metro bundler cannot resolve Zello SDK
 
-### Check Connection State
+**Fix:** Clear Metro cache:
 
-```typescript
-console.log('State:', Zello.state);
-console.log('Connection:', Zello.connectionState);
-console.log('Account:', Zello.accountStatus);
+```bash
+pnpm start --clear
 ```
 
-### Verify Network Credentials
+### EAS build timeout
 
-Test credentials by logging into the Zello Work web console at `https://{network}.zellowork.com` with the same username/password.
+Zello's native dependencies (Hilt, protobuf) increase build time.
+If EAS builds timeout, increase the resource class in `eas.json`:
 
-## SDK Version Compatibility
+```json
+"android": {
+  "resourceClass": "m-medium"
+}
+```
 
-| RN SDK | Android Native SDK | Min RN | Status |
-|---|---|---|---|
-| 2.0.1 | 1.0.4 | 0.74 | Current |
-| 2.0.0 | 1.0.x | 0.74 | Required since Aug 2025 |
-| 1.x | 1.0.x | 0.74 | Deprecated |
+## Debugging
+
+### Enable SDK logging
+
+```typescript
+Zello.setLogLevel('debug');
+```
+
+### Check connection state
+
+```typescript
+Zello.Listener.on('onConnectFailed', ({ error }) => {
+  console.error('[ZELLO] Connection failed:', error);
+});
+```
+
+### Verify FCM token delivery
+
+Check the Firebase console → Cloud Messaging → Diagnostics for
+delivery status to `au.melbourne.patrolzones`.

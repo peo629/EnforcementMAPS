@@ -1,57 +1,73 @@
 ---
 title: Security & Networking
-scope: security
-last_reviewed: "2026-03-27"
+scope: encryption, tls, firewall, credential-storage
+sdk: "@zelloptt/react-native-zello-sdk@2.0.1"
+platform: EnforcementMAPS (Expo 54 / React Native 0.81)
+updated: 2026-03-27
 ---
 
 # Security & Networking
 
 ## Encryption
 
-All Zello SDK communication is encrypted:
+| Layer | Method |
+|-------|--------|
+| Voice data | AES-256-CBC, per-message key |
+| Signalling | TLS 1.2+ (HTTPS) |
+| Media transport | DTLS-SRTP |
+| At rest | Not stored on device by default |
 
-| Layer | Encryption |
-|---|---|
-| Transport | TLS (HTTPS / WSS) |
-| Voice payload | AES-256 |
-| Key exchange | RSA-1024 |
-
-Voice data is encrypted end-to-end between devices. The Zello server relays encrypted packets without decrypting them.
+All encryption is handled by the SDK — no application-level crypto needed.
 
 ## Network Requirements
 
 ### Ports
 
-| Protocol | Port | Purpose |
-|---|---|---|
-| HTTPS | 443 | API and signaling |
-| WSS | 443 | WebSocket (voice streaming) |
-| UDP | 443, 80 | Media transport (fallback) |
+| Port | Protocol | Purpose |
+|------|----------|---------|
+| 443 | TCP/TLS | Signalling, API, auth |
+| 3478 | UDP | STUN/TURN media relay |
+| 10000–20000 | UDP | Direct media (if available) |
 
-### Domains to Allowlist
+### Firewall Allowlist
 
-If operating behind a corporate firewall or MDM:
+If operating on restricted networks (e.g., council IT):
 
-- `*.zellowork.com`
-- `*.zello.com`
-- `zello-sdk.s3.amazonaws.com` (SDK Maven repo)
-- `fcm.googleapis.com` (push notifications)
+```
+*.zellowork.com       — API and signalling
+*.jfrog.io            — SDK artefact delivery (build time only)
+*.firebaseio.com      — FCM push
+*.googleapis.com      — FCM push
+```
 
-## Proxy Support
+## Credential Security
 
-The SDK supports HTTP proxies configured at the OS level. Custom proxy configuration is not exposed via the SDK API.
+Follow the project's existing security practices from `CLAUDE.md`:
 
-## Certificate Pinning
+| Credential | Storage | Notes |
+|-----------|---------|-------|
+| Zello network issuer | `eas.json` env var | Build-time only |
+| Zello credential key | `eas.json` env var | Build-time only |
+| Zello session token | SDK internal | Not accessible to app code |
+| App JWT | `expo-secure-store` | Existing — unchanged |
+| Firebase `google-services.json` | `.gitignore` | **Must not** be committed |
 
-The SDK performs certificate validation against standard Android trust stores. Custom CA certificates must be added to the Android network security config if required.
+> **Important:** Add `google-services.json` to `.gitignore` if not
+> already present.
 
-## Data at Rest
+## Offline Behaviour
 
-- Message history is stored locally on device in an encrypted database managed by the SDK.
-- No Zello data is synced to external cloud storage by the SDK.
+- Zello requires an active network connection for PTT.
+- The SDK auto-reconnects when connectivity is restored (`onWillReconnect` event).
+- The app's existing offline-first patterns (per `CLAUDE.md` guidelines)
+  should handle graceful degradation — show a "PTT unavailable" indicator
+  when Zello is disconnected.
 
-## Compliance Notes
+## Audit Logging
 
-- The SDK does not collect personal data beyond what is required for PTT functionality.
-- User provisioning and data retention policies are managed through the Zello Work Administrative Console.
-- For CJIS or other compliance requirements, contact Zello directly for their compliance documentation.
+Zello Work admin console provides:
+- Message history and timestamps
+- Emergency event logs
+- User connection/disconnection logs
+
+These complement the MAPS API's own audit trail.

@@ -1,76 +1,98 @@
 ---
-title: Emergency Mode & Dispatch
-scope: emergency
-last_reviewed: "2026-03-27"
+title: Emergency Mode & Dispatch Integration
+scope: emergency, code21-mapping
+sdk: "@zelloptt/react-native-zello-sdk@2.0.1"
+platform: EnforcementMAPS (Expo 54 / React Native 0.81)
+updated: 2026-03-27
 ---
 
-# Emergency Mode & Dispatch
+# Emergency Mode & Dispatch Integration
 
-## Emergency Mode
+## Zello Emergency Mode
 
-Emergency mode sends an urgent alert to a designated emergency channel. When activated, the SDK automatically:
-
-1. Sends the user's **current location**.
-2. Sends an **alert message**.
-3. Begins recording a **10-second voice message**.
-
-### Starting an Emergency
+When activated, emergency mode:
+- Opens a priority audio channel to dispatch
+- Overrides mute settings on all recipients
+- Sends the officer's location automatically
+- Triggers a prominent alert on dispatch console
 
 ```typescript
-Zello.startEmergency();
+Zello.startEmergency();  // Activate
+Zello.stopEmergency();   // Deactivate
 ```
 
-### Stopping an Emergency
+## Mapping to Code21 Dispatch
+
+The existing `src/features/code21/` module handles dispatch requests.
+Zello emergency mode should **complement**, not replace, Code21:
+
+| Scenario | Code21 | Zello Emergency |
+|----------|--------|----------------|
+| Dispatch sends job to officer | ✅ Push notification | — |
+| Officer acknowledges dispatch | ✅ API call | — |
+| Officer needs immediate help | — | ✅ Live voice + location |
+| Officer sends status update | ✅ API status change | ✅ PTT voice |
+
+### Triggering Both Systems
+
+When an officer triggers emergency, fire both:
 
 ```typescript
-Zello.stopEmergency();
+// src/features/zello/hooks/useZelloEmergency.ts
+import Zello from '@zelloptt/react-native-zello-sdk';
+import api from '@/shared/infra/api';
+
+export function useZelloEmergency() {
+  const startEmergency = async () => {
+    // 1. Activate Zello emergency (live voice + location)
+    Zello.startEmergency();
+
+    // 2. Notify MAPS API (creates Code21 record, alerts supervisors)
+    try {
+      await api.post('/code21/emergency', {
+        type: 'OFFICER_EMERGENCY',
+        source: 'zello',
+      });
+    } catch {
+      // Zello emergency is already active — API failure is non-blocking
+      console.error('[EMERGENCY] Failed to notify MAPS API');
+    }
+  };
+
+  const stopEmergency = () => {
+    Zello.stopEmergency();
+  };
+
+  return { startEmergency, stopEmergency };
+}
 ```
 
-### Emergency Events
+## Listening for Emergencies
 
-| Event | Description |
-|---|---|
-| `onOutgoingEmergencyStarted` | Emergency activated |
-| `onOutgoingEmergencyStopped` | Emergency deactivated |
-| `onIncomingEmergencyStarted` | Another user started an emergency |
-| `onIncomingEmergencyUpdated` | Emergency status changed |
-| `onIncomingEmergencyStopped` | Another user's emergency ended |
-
-### Emergency Prerequisites
-
-- An **emergency channel** must be configured in the Zello Work Administrative Console.
-- The `ACCESS_FINE_LOCATION` permission must be granted.
-- Access via: `Zello.emergencyChannel`
+Dispatch/supervisor app receives emergency events:
 
 ```typescript
-Zello.on('incomingEmergencyStarted', (emergency) => {
-  // emergency.channel — the emergency channel
-  // emergency.channelUser — who triggered it
-  // emergency.emergencyId — unique ID
-  // emergency.startTimestamp — when it started
+Zello.Listener.on('onEmergencyStarted', (event) => {
+  // event.contact — officer in emergency
+  // Highlight on patrol map, sound alarm
+});
+
+Zello.Listener.on('onEmergencyStopped', (event) => {
+  // Clear emergency state
 });
 ```
 
-## Dispatch Channels
+## Emergency Button Placement
 
-Dispatch channels pair **dispatchers** with **field users** through a call-based workflow.
+Place the emergency button in a **persistent, accessible location** —
+not buried in a menu. Consider a long-press gesture to prevent
+accidental activation (3-second hold).
 
-### Dispatch Channel Properties
+## Dispatch Call
 
-| Property | Description |
-|---|---|
-| `currentCall` | Active dispatch call (if any) |
-| `call.status` | Call state |
-
-### Ending a Dispatch Call
+For non-emergency priority communications, use `Zello.sendDispatchCall()`:
 
 ```typescript
-Zello.endDispatchCall(call, dispatchChannel);
+// Request attention from dispatch without full emergency
+await Zello.sendDispatchCall(dispatchChannel);
 ```
-
-| Event | Description |
-|---|---|
-| `onDispatchCallTransferred` | Call transferred to another dispatcher |
-| `onDispatchCallEnded` | Call ended |
-
-> Ending calls may be restricted by console settings (`allowNonDispatchersToEndCalls`).

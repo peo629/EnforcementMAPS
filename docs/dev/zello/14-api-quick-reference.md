@@ -1,128 +1,103 @@
 ---
 title: API Quick Reference
-scope: api-reference
-last_reviewed: "2026-03-27"
+scope: method-summary, property-summary, types
+sdk: "@zelloptt/react-native-zello-sdk@2.0.1"
+platform: EnforcementMAPS (Expo 54 / React Native 0.81)
+updated: 2026-03-27
 ---
 
 # API Quick Reference
 
-Condensed reference of all `Zello` singleton methods and properties.
+## Connection
 
-## Lifecycle
-
-| Method | Description |
-|---|---|
-| `start()` | Initialize the SDK (call once) |
-| `configure(options)` | Set push notifications & foreground service options |
-| `connect(credentials)` | Sign into Zello Work network |
-| `disconnect()` | Sign out |
-
-## Properties (Read-Only After Connection)
-
-| Property | Type | Description |
-|---|---|---|
-| `state` | `ZelloState` | SDK state (started/stopped) |
-| `connectionState` | `ZelloConnectionState` | Connection state |
-| `accountStatus` | `ZelloAccountStatus?` | Online/busy/standby |
-| `users` | `ZelloUser[]` | Contact list users |
-| `channels` | `ZelloChannel[]` | Channels |
-| `groupConversations` | `ZelloGroupConversation[]` | Ad-hoc groups |
-| `recents` | `ZelloRecentEntry[]` | Recent messages |
-| `selectedContact` | `ZelloContact?` | Currently selected contact |
-| `incomingVoiceMessage` | `ZelloIncomingVoiceMessage?` | Active incoming PTT |
-| `outgoingVoiceMessage` | `ZelloOutgoingVoiceMessage?` | Active outgoing PTT |
-| `incomingEmergencies` | `ZelloIncomingEmergency[]` | Active emergencies |
-| `outgoingEmergency` | `ZelloOutgoingEmergency?` | Own emergency |
-| `emergencyChannel` | `ZelloChannel?` | Configured emergency channel |
-| `consoleSettings` | `ZelloConsoleSettings` | Network feature flags |
-| `historyVoiceMessage` | `ZelloHistoryVoiceMessage?` | Playing history message |
+| Method | Signature | Purpose |
+|--------|-----------|---------|
+| `connect` | `(config: ZelloConfig) → void` | Authenticate and connect |
+| `disconnect` | `() → void` | End session |
+| `setLogLevel` | `(level: string) → void` | Set SDK log verbosity |
 
 ## Voice
 
-| Method | Description |
-|---|---|
-| `startVoiceMessage(contact)` | Begin PTT transmission |
-| `stopVoiceMessage()` | End PTT transmission |
+| Method | Signature | Purpose |
+|--------|-----------|---------|
+| `send` | `(contact: ZelloContact) → void` | Start PTT to contact/channel |
+| `stopSending` | `() → void` | End PTT transmission |
+| `playHistory` | `(message: ZelloHistoryMessage) → void` | Replay history message |
+| `stopPlayback` | `() → void` | Stop history playback |
 
-## Rich Messaging
+## Messaging
 
-| Method | Description |
-|---|---|
-| `sendText(text, contact)` | Send text message |
-| `sendImage(data, contact)` | Send image message |
-| `sendLocation(contact)` | Send current location |
-| `sendAlert(text, contact)` | Send alert message |
+| Method | Signature | Purpose |
+|--------|-----------|---------|
+| `sendText` | `(contact, text: string) → void` | Send text message |
+| `sendImage` | `(contact, uri: string) → void` | Send image message |
+| `sendLocation` | `(contact) → void` | Send current location |
+| `sendAlert` | `(contact, text, level) → void` | Send priority alert |
 
-## Channels
+## Channels & Contacts
 
-| Method | Description |
-|---|---|
-| `connectChannel(channel)` | Join a channel |
-| `disconnectChannel(channel)` | Leave a channel |
-
-## Group Conversations
-
-| Method | Description |
-|---|---|
-| `createGroupConversation(users, name?)` | Create ad-hoc group |
-| `addUsersToGroupConversation(conv, users)` | Add members |
-| `renameGroupConversation(conv, name)` | Rename group |
-| `leaveGroupConversation(conv)` | Leave group |
+| Method | Signature | Purpose |
+|--------|-----------|---------|
+| `connectChannel` | `(name: string) → void` | Join a channel |
+| `disconnectChannel` | `(name: string) → void` | Leave a channel |
+| `muteContact` | `(contact) → void` | Mute contact/channel |
+| `unmuteContact` | `(contact) → void` | Unmute |
+| `createGroupConversation` | `(contacts[]) → ZelloContact` | Create ad-hoc group |
 
 ## Emergency
 
-| Method | Description |
-|---|---|
-| `startEmergency()` | Activate emergency mode |
-| `stopEmergency()` | Deactivate emergency mode |
+| Method | Signature | Purpose |
+|--------|-----------|---------|
+| `startEmergency` | `() → void` | Activate emergency mode |
+| `stopEmergency` | `() → void` | Deactivate emergency mode |
+| `sendDispatchCall` | `(channel) → void` | Request dispatch attention |
 
-## Dispatch
+## Key Types
 
-| Method | Description |
-|---|---|
-| `endDispatchCall(call, channel)` | End a dispatch call |
+```typescript
+interface ZelloConfig {
+  network: string;   // Network issuer URL
+  username: string;  // Officer Zello username
+  password: string;  // Credential key or password
+}
 
-## Contacts
+interface ZelloContact {
+  name: string;
+  displayName: string;
+  type: 'user' | 'channel' | 'group_conversation';
+  status: 'online' | 'offline' | 'busy' | 'standby';
+  isMuted: boolean;
+}
 
-| Method | Description |
-|---|---|
-| `getUser(name)` | Lookup user by name |
-| `getChannel(name)` | Lookup channel by name |
-| `getGroupConversation(name)` | Lookup group by name |
-| `setSelectedContact(contact)` | Set active contact |
-| `muteContact(contact)` | Mute a contact |
-| `unmuteContact(contact)` | Unmute a contact |
+interface ZelloChannel {
+  name: string;
+  status: 'connected' | 'disconnected' | 'connecting';
+  usersOnline: number;
+}
 
-## History
+interface ZelloHistoryMessage {
+  messageId: string;
+  contact: ZelloContact;
+  timestamp: number;
+  type: 'voice' | 'text' | 'image' | 'location' | 'alert';
+}
+```
 
-| Method | Description |
-|---|---|
-| `getHistory(contact, size?)` | Get message history |
-| `getHistoryMessage(id, contact)` | Get specific history entry |
-| `playHistoryMessage(message)` | Play voice history |
-| `stopHistoryMessagePlayback()` | Stop voice playback |
-| `loadBitmapForHistoryImageMessage(msg, cb)` | Load history image |
+## EnforcementMAPS Feature Module Structure
 
-## Notifications
-
-| Method | Description |
-|---|---|
-| `clearAllMessageNotifications()` | Clear all notifications |
-| `clearMessageNotificationsForContact(contact)` | Clear per-contact |
-
-## Account
-
-| Method | Description |
-|---|---|
-| `setAccountStatus(status)` | Set online status |
-
-## Diagnostics
-
-| Method | Description |
-|---|---|
-| `submitProblemReport()` | Send logs to Zello support |
-
-## Full API Docs
-
-- **Android (Kotlin):** <https://developers.zello.com/sdk/v2.0/android/>
-- **React Native SDK source:** <https://github.com/zelloptt/react-native-zello-sdk/tree/master/src>
+```
+src/features/zello/
+  ├── api/                    # Provisioning API calls (optional)
+  ├── components/
+  │   ├── PTTButton.tsx       # Press-to-talk button
+  │   ├── ChannelList.tsx     # Channel picker
+  │   └── MessageFeed.tsx     # Incoming message display
+  ├── hooks/
+  │   ├── useZelloPTT.ts      # PTT state management
+  │   ├── useZelloEvents.ts   # Event subscriptions
+  │   ├── useZelloMessaging.ts # Rich message helpers
+  │   ├── useZelloEmergency.ts # Emergency mode
+  │   └── useZelloPermissions.ts # Runtime permission requests
+  ├── domain.ts               # Zello types, username mapping
+  └── zello-provider.tsx      # Context provider (auth lifecycle)
+```

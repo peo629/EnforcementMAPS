@@ -1,59 +1,83 @@
 ---
-title: Android Permissions
-scope: permissions
-last_reviewed: "2026-03-27"
+title: Permissions
+scope: android-manifest, runtime-prompts, expo-config
+sdk: "@zelloptt/react-native-zello-sdk@2.0.1"
+platform: EnforcementMAPS (Expo 54 / React Native 0.81)
+updated: 2026-03-27
 ---
 
-# Android Permissions
+# Permissions
 
-## Manifest Permissions
+## Current App Permissions
 
-The Zello SDK declares the following permissions. Most are included automatically via the AAR manifest merge. Verify they are present in your merged manifest:
-
-```xml
-<!-- Core PTT -->
-<uses-permission android:name="android.permission.INTERNET" />
-<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-<uses-permission android:name="android.permission.RECORD_AUDIO" />
-<uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
-<uses-permission android:name="android.permission.BLUETOOTH" />
-<uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
-
-<!-- Foreground service -->
-<uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-<uses-permission android:name="android.permission.FOREGROUND_SERVICE_PHONE_CALL" />
-<uses-permission android:name="android.permission.WAKE_LOCK" />
-
-<!-- Location (for location messages + emergency) -->
-<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
-<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
-
-<!-- Notifications (Android 13+) -->
-<uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-
-<!-- Vibration -->
-<uses-permission android:name="android.permission.VIBRATE" />
-```
-
-## Runtime Permission Requests
-
-Android 6.0+ requires runtime prompts for dangerous permissions. Request these before using the corresponding SDK feature:
-
-| Permission | Required For | When to Request |
-|---|---|---|
-| `RECORD_AUDIO` | Voice messages | Before first PTT action |
-| `ACCESS_FINE_LOCATION` | Location messages, emergency | Before `sendLocation()` or `startEmergency()` |
-| `POST_NOTIFICATIONS` | Push notifications (API 33+) | At app start or before `configure()` |
-| `BLUETOOTH_CONNECT` | Bluetooth audio (API 31+) | Before audio routing to BT |
-
-### Recommended Library
-
-Use `react-native-permissions` for cross-platform runtime permission handling:
+`app.config.ts` already declares:
 
 ```typescript
-import { request, PERMISSIONS } from 'react-native-permissions';
-
-await request(PERMISSIONS.ANDROID.RECORD_AUDIO);
-await request(PERMISSIONS.ANDROID.ACCESS_FINE_LOCATION);
-await request(PERMISSIONS.ANDROID.POST_NOTIFICATIONS);
+android: {
+  permissions: ['ACCESS_FINE_LOCATION', 'ACCESS_COARSE_LOCATION'],
+}
 ```
+
+## Additional Permissions for Zello
+
+Update the `android.permissions` array in `app.config.ts`:
+
+```typescript
+android: {
+  permissions: [
+    // Existing
+    'ACCESS_FINE_LOCATION',
+    'ACCESS_COARSE_LOCATION',
+    // Zello PTT
+    'RECORD_AUDIO',
+    'BLUETOOTH_CONNECT',
+    'POST_NOTIFICATIONS',
+    'FOREGROUND_SERVICE',
+    'FOREGROUND_SERVICE_MICROPHONE',
+  ],
+}
+```
+
+| Permission | Purpose | Runtime Prompt? |
+|------------|---------|----------------|
+| `RECORD_AUDIO` | PTT voice capture | Yes (Android 6+) |
+| `BLUETOOTH_CONNECT` | Bluetooth headset PTT button | Yes (Android 12+) |
+| `POST_NOTIFICATIONS` | Zello foreground service notification | Yes (Android 13+) |
+| `FOREGROUND_SERVICE` | Keep Zello alive in background | No (manifest only) |
+| `FOREGROUND_SERVICE_MICROPHONE` | Microphone access in foreground service | No (manifest only) |
+
+## Runtime Permission Flow
+
+Request microphone permission **before** the first PTT attempt.
+Follow the existing pattern from `usePushNotifications.ts`:
+
+```typescript
+// src/features/zello/hooks/useZelloPermissions.ts
+import { PermissionsAndroid, Platform } from 'react-native';
+
+export async function requestZelloPermissions(): Promise<boolean> {
+  if (Platform.OS !== 'android') return true;
+
+  const grants = await PermissionsAndroid.requestMultiple([
+    PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
+    PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT,
+    PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
+  ]);
+
+  return grants[PermissionsAndroid.PERMISSIONS.RECORD_AUDIO] === 'granted';
+}
+```
+
+## Permission Timing
+
+- Request on **first PTT tap**, not on app launch.
+- If denied, show a user-friendly message (follow the `http.ts` error
+  message pattern — plain language, no technical jargon).
+- Bluetooth permission is optional — PTT works without it; only needed
+  for hardware PTT buttons.
+
+## iOS (Future)
+
+If iOS support is added later, `NSMicrophoneUsageDescription` and
+`NSBluetoothAlwaysUsageDescription` must be added to `ios.infoPlist`
+in `app.config.ts`.
