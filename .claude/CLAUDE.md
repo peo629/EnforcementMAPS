@@ -203,3 +203,13 @@ pnpm --filter @civic-maps/db run push
 # Generate API client from OpenAPI spec
 pnpm --filter @civic-maps/api-spec run generate
 ```
+
+## Skills
+
+### Available Skills
+
+| Skill | Path | Description |
+|-------|------|-------------|
+| skill-creator | `.claude/.agents/skills/skill-creator/` | Create new skills, modify and improve existing skills, and measure skill performance. Use when users want to create a skill from scratch, edit, or optimize an existing skill, run evals to test a skill, benchmark skill performance with variance analysis, or optimize a skill's description for better triggering accuracy. |
+
+Skills are located in `.claude/.agents/skills/` and follow the [Anthropic skill format](https://github.com/anthropics/skills). Each skill contains a `SKILL.md` with frontmatter metadata and instructions.
