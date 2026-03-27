@@ -10,8 +10,8 @@
       "distribution": "internal",
       "autoIncrement": true,
       "env": {
-        "EXPO_PUBLIC_API_BASE_URL": "https://api.placeholder.local",
-        "EXPO_PUBLIC_DOMAIN": "api.placeholder.local",
+        "EXPO_PUBLIC_API_BASE_URL": "https://comfortable-freedom-production.up.railway.app",
+        "EXPO_PUBLIC_DOMAIN": "comfortable-freedom-production.up.railway.app",
         "EXPO_PUBLIC_ENVIRONMENT": "development",
         "APP_ENV": "development",
         "GOOGLE_MAPS_API_KEY": "AIzaSyCkhndYKPYh7EB7G0hLrQboZQEO9C7B9LQ"
@@ -28,8 +28,8 @@
       "distribution": "internal",
       "autoIncrement": true,
       "env": {
-        "EXPO_PUBLIC_API_BASE_URL": "https://api.placeholder.local",
-        "EXPO_PUBLIC_DOMAIN": "api.placeholder.local",
+        "EXPO_PUBLIC_API_BASE_URL": "https://comfortable-freedom-production.up.railway.app",
+        "EXPO_PUBLIC_DOMAIN": "comfortable-freedom-production.up.railway.app",
         "EXPO_PUBLIC_ENVIRONMENT": "preview",
         "APP_ENV": "preview",
         "GOOGLE_MAPS_API_KEY": "AIzaSyCkhndYKPYh7EB7G0hLrQboZQEO9C7B9LQ"
@@ -44,8 +44,8 @@
     "production": {
       "autoIncrement": true,
       "env": {
-        "EXPO_PUBLIC_API_BASE_URL": "https://api.placeholder.local",
-        "EXPO_PUBLIC_DOMAIN": "api.placeholder.local",
+        "EXPO_PUBLIC_API_BASE_URL": "https://comfortable-freedom-production.up.railway.app",
+        "EXPO_PUBLIC_DOMAIN": "comfortable-freedom-production.up.railway.app",
         "EXPO_PUBLIC_ENVIRONMENT": "production",
         "APP_ENV": "production",
         "GOOGLE_MAPS_API_KEY": "AIzaSyCkhndYKPYh7EB7G0hLrQboZQEO9C7B9LQ"
