@@ -2,25 +2,9 @@
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
     "strict": true,
-    "resolveJsonModule": true,
-    "moduleResolution": "bundler",
-    "baseUrl": ".",
     "paths": {
-      "@/*": [
-        "./src/*"
-      ],
-      "@officer/*": [
-        "./src/*"
-      ],
-      "@geo/*": [
-        "./packages/geo/*"
-      ]
+      "@/*": ["./*"]
     }
   },
-  "include": [
-    ".",
-    "./packages/contracts",
-    "./packages/domain",
-    "./packages/geo"
-  ]
+  "include": ["**/*.ts", "**/*.tsx", ".expo/types/**/*.ts", "expo-env.d.ts"]
 }
