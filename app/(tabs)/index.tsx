@@ -1,13 +1,20 @@
-import { Text, View, StyleSheet } from 'react-native';
-import { Link } from 'expo-router';
+import { View, StyleSheet } from 'react-native';
+
+import Button from '@/components/button';
+import ImageViewer from '@/components/image-viewer';
+
+const PlaceholderImage = require('@/assets/images/icon.png');
 
 export default function PatrolScreen() {
   return (
     <View style={styles.container}>
-      <Text style={styles.text}>Patrol screen</Text>
-      <Link href="/about" style={styles.button}>
-        Go to About screen
-      </Link>
+      <View style={styles.imageContainer}>
+        <ImageViewer imgSource={PlaceholderImage} />
+      </View>
+      <View style={styles.footerContainer}>
+        <Button theme="primary" label="Start Patrol" />
+        <Button label="View Dispatches" />
+      </View>
     </View>
   );
 }
@@ -17,15 +24,13 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#25292e',
     alignItems: 'center',
-    justifyContent: 'center',
   },
-  text: {
-    color: '#fff',
+  imageContainer: {
+    flex: 1,
+    paddingTop: 28,
   },
-  button: {
-    fontSize: 20,
-    textDecorationLine: 'underline',
-    color: '#fff',
-    marginTop: 16,
+  footerContainer: {
+    flex: 1 / 3,
+    alignItems: 'center',
   },
 });
