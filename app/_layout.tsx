@@ -1,62 +1,49 @@
-import { useEffect } from 'react';
-import { Stack, useRouter, useSegments } from 'expo-router';
-import * as SplashScreen from 'expo-splash-screen';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { AuthProvider, useAuth } from '@/shared/infra/auth-context';
-import { usePushNotifications } from '@/shared/hooks/usePushNotifications';
+import React, { useEffect } from 'react';
+import { Stack, useRouter, useSegments, SplashScreen } from 'expo-router';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { AuthProvider, useAuth } from '@/features/auth/auth-provider';
+import { queryClient } from '@/shared/infra/query-client';
+import { ErrorBoundary } from '@/shared/ui/ErrorBoundary';
 
-// Keep native splash screen visible while auth state is being restored.
-SplashScreen.preventAutoHideAsync().catch(() => {});
+SplashScreen.preventAutoHideAsync();
 
-const queryClient = new QueryClient();
-
-// ─── App Navigator ────────────────────────────────────────────────────────────
-// Uses useEffect + router.replace instead of Stack.Protected because
-// Stack.Protected has known reliability issues in expo-router 6 (missing
-// fallback redirects, no screen refresh on sign-in/out). See expo/expo#37305.
-//
-// The `if (loading) return` guard prevents the "navigate before mounting Root
-// Layout" error that affected the earlier AuthGate implementation, since
-// navigation is deferred until both the navigator is mounted AND auth state
-// is fully resolved.
 function AppNavigator() {
-  const { token, loading } = useAuth();
+  const { user, loading } = useAuth();
   const segments = useSegments();
   const router = useRouter();
 
-  usePushNotifications(!!token);
-
   useEffect(() => {
-    if (loading) return; // Wait for auth state to be determined
-
-    // Hide native splash screen now that we know whether user is logged in.
-    SplashScreen.hideAsync().catch(() => {});
-
+    if (loading) return;
     const inAuthGroup = segments[0] === 'login' || segments[0] === 'register';
-
-    if (!token && !inAuthGroup) {
+    if (!user && !inAuthGroup) {
       router.replace('/login');
-    } else if (token && inAuthGroup) {
+    } else if (user && inAuthGroup) {
       router.replace('/');
     }
-  }, [token, loading, segments, router]);
+  }, [user, loading, segments]);
+
+  useEffect(() => {
+    if (!loading) SplashScreen.hideAsync();
+  }, [loading]);
 
   return (
     <Stack>
-      <Stack.Screen name="index" options={{ title: 'Patrol' }} />
+      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="login" options={{ headerShown: false }} />
       <Stack.Screen name="register" options={{ headerShown: false }} />
+      <Stack.Screen name="+not-found" />
     </Stack>
   );
 }
 
-// ─── Root Layout ──────────────────────────────────────────────────────────────
-export default function Layout() {
+export default function RootLayout() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <AppNavigator />
-      </AuthProvider>
-    </QueryClientProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <AppNavigator />
+        </AuthProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 }

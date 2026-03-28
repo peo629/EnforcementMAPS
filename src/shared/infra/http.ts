@@ -1,7 +1,5 @@
 import { Platform } from "react-native";
 
-// ─── Types ───────────────────────────────────────────────────────────────────
-
 export interface ApiResult<T = unknown> {
   ok: true;
   data: T;
@@ -10,22 +8,11 @@ export interface ApiResult<T = unknown> {
 export interface ApiError {
   ok: false;
   error: string;
-  /** Technical details for developer logging only — never shown to users. */
   technicalDetail?: string;
 }
 
 export type ApiResponse<T = unknown> = ApiResult<T> | ApiError;
 
-// ─── Status Code Classification ──────────────────────────────────────────────
-
-/**
- * Classifies an HTTP response into an error category based on its status code
- * and content type. This is the single source of truth for mapping HTTP
- * responses to user-facing error messages.
- *
- * Uses HTTP status codes (the canonical signal) rather than parsing response
- * body text, which is fragile and provider-specific.
- */
 export function classifyHttpError(status: number): "auth" | "forbidden" | "not_found" | "validation" | "infrastructure" | "server" | "unknown" {
   if (status === 401) return "auth";
   if (status === 403) return "forbidden";
@@ -36,12 +23,6 @@ export function classifyHttpError(status: number): "auth" | "forbidden" | "not_f
   return "unknown";
 }
 
-// ─── User-Facing Error Messages ──────────────────────────────────────────────
-
-/**
- * Maps error classifications to messages appropriate for field officers.
- * These messages avoid technical jargon (no IPs, no "deployed", no "API").
- */
 const USER_MESSAGES: Record<ReturnType<typeof classifyHttpError>, string> = {
   auth: "Invalid credentials. Please check your officer number and password.",
   forbidden: "Your account does not have access. Contact your supervisor.",
@@ -56,30 +37,12 @@ export function getUserMessage(classification: ReturnType<typeof classifyHttpErr
   return USER_MESSAGES[classification];
 }
 
-// ─── Content Type Detection ──────────────────────────────────────────────────
-
-/**
- * Returns true if the Content-Type header indicates a JSON response body.
- * Handles charset suffixes (e.g. "application/json; charset=utf-8").
- */
 export function isJsonResponse(response: Response): boolean {
   const ct = response.headers.get("content-type") ?? "";
-  return /^application\/json\b/i.test(ct);
+  return /^application\/json\\b/i.test(ct);
 }
 
-// ─── Unified Response Handler ────────────────────────────────────────────────
-
-/**
- * Parses an HTTP response into a structured ApiResponse. Handles:
- *
- * 1. Non-JSON responses (HTML error pages, plain text from infrastructure)
- * 2. JSON error responses from the application server
- * 3. Successful JSON responses
- *
- * This replaces ad-hoc response parsing scattered across individual call sites.
- */
 export async function parseApiResponse<T>(response: Response): Promise<ApiResponse<T>> {
-  // 1. Non-JSON response — infrastructure proxy, HTML error page, etc.
   if (!isJsonResponse(response)) {
     const classification = classifyHttpError(response.status);
     let technicalDetail: string | undefined;
@@ -102,7 +65,6 @@ export async function parseApiResponse<T>(response: Response): Promise<ApiRespon
     };
   }
 
-  // 2. Parse JSON body
   let data: T & { error?: string | { message?: string }; message?: string; details?: Array<{ message?: string }> };
   try {
     data = await response.json();
@@ -114,16 +76,12 @@ export async function parseApiResponse<T>(response: Response): Promise<ApiRespon
     };
   }
 
-  // 3. Successful response
   if (response.ok) {
     return { ok: true, data: data as T };
   }
 
-  // 4. Application-level error (JSON body with error details)
   const classification = classifyHttpError(response.status);
 
-  // For auth and validation errors, prefer the server's specific message
-  // since it contains actionable details (e.g. "Email already registered")
   if (classification === "auth" || classification === "validation") {
     const serverMessage = extractServerError(data);
     if (serverMessage) {
@@ -138,13 +96,6 @@ export async function parseApiResponse<T>(response: Response): Promise<ApiRespon
   };
 }
 
-/**
- * Extracts the most specific error message from a JSON error response body.
- * Handles the three shapes the MAPS API uses:
- *   - { error: "message" }
- *   - { error: { message: "message" } }
- *   - { details: [{ message: "message" }] }
- */
 function extractServerError(data: { error?: string | { message?: string }; message?: string; details?: Array<{ message?: string }> }): string | null {
   if (typeof data?.error === "string") return data.error;
   if (typeof data?.error === "object" && typeof data.error?.message === "string") return data.error.message;

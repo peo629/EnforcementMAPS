@@ -14,7 +14,7 @@ import { useRouter } from 'expo-router';
 import { setSecureItem } from '@/shared/infra/secure-storage';
 import { useAuth } from '@/shared/infra/auth-context';
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// \u2500\u2500\u2500 Types \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 
 type Mode = 'login' | 'register';
 
@@ -30,7 +30,7 @@ interface FieldError {
   general?: string;
 }
 
-// ─── Constants ────────────────────────────────────────────────────────────────
+// \u2500\u2500\u2500 Constants \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 
 const ALLOWED_DOMAINS = [
   'melbourne.vic.gov.au',
@@ -41,8 +41,7 @@ const ALLOWED_DOMAINS = [
   'apo.gov.au',
 ];
 
-
-// ─── Validation ───────────────────────────────────────────────────────────────
+// \u2500\u2500\u2500 Validation \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 
 function isGovAuEmail(email: string): boolean {
   const lower = email.toLowerCase().trim();
@@ -56,13 +55,13 @@ function isGovAuEmail(email: string): boolean {
 
 function validateOfficerNumber(value: string): string | undefined {
   if (!value.trim()) return 'Officer number is required';
-  if (!/^\d{2,4}$/.test(value.trim())) return 'Officer number must be 2–4 digits';
+  if (!/^\\d{2,4}$/.test(value.trim())) return 'Officer number must be 2\u20134 digits';
   return undefined;
 }
 
 function validateEmail(value: string): string | undefined {
   if (!value.trim()) return 'Email address is required';
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim())) return 'Enter a valid email address';
+  if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(value.trim())) return 'Enter a valid email address';
   if (!isGovAuEmail(value)) {
     return 'Registration is restricted to government email addresses (@gov.au)';
   }
@@ -81,7 +80,7 @@ function validateConfirmPassword(password: string, confirm: string): string | un
   return undefined;
 }
 
-// ─── Component ────────────────────────────────────────────────────────────────
+// \u2500\u2500\u2500 Component \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 
 export default function AuthScreen({ mode }: AuthScreenProps) {
   const router = useRouter();
@@ -95,8 +94,6 @@ export default function AuthScreen({ mode }: AuthScreenProps) {
   const [loading, setLoading] = useState(false);
 
   const isLogin = mode === 'login';
-
-  // ── Validate ────────────────────────────────────────────────────────────────
 
   const validate = useCallback((): boolean => {
     const next: FieldError = {};
@@ -120,8 +117,6 @@ export default function AuthScreen({ mode }: AuthScreenProps) {
     setErrors(next);
     return Object.keys(next).length === 0;
   }, [officerNumber, email, password, confirmPassword, isLogin]);
-
-  // ── Submit ───────────────────────────────────────────────────────────────────
 
   const handleSubmit = useCallback(async () => {
     if (!validate()) return;
@@ -152,8 +147,6 @@ export default function AuthScreen({ mode }: AuthScreenProps) {
     }
   }, [validate, isLogin, officerNumber, email, password, confirmPassword, login, register, router]);
 
-  // ── Render ───────────────────────────────────────────────────────────────────
-
   return (
     <KeyboardAvoidingView
       style={styles.flex}
@@ -181,7 +174,6 @@ export default function AuthScreen({ mode }: AuthScreenProps) {
 
         {/* Form */}
         <View style={styles.form}>
-
           {/* Officer Number */}
           <View style={styles.field}>
             <Text style={styles.label}>Officer Number</Text>
@@ -203,7 +195,7 @@ export default function AuthScreen({ mode }: AuthScreenProps) {
             ) : null}
           </View>
 
-          {/* Email — registration only */}
+          {/* Email \u2014 registration only */}
           {!isLogin && (
             <View style={styles.field}>
               <Text style={styles.label}>Government Email Address</Text>
@@ -249,7 +241,7 @@ export default function AuthScreen({ mode }: AuthScreenProps) {
             ) : null}
           </View>
 
-          {/* Confirm Password — registration only */}
+          {/* Confirm Password \u2014 registration only */}
           {!isLogin && (
             <View style={styles.field}>
               <Text style={styles.label}>Confirm Password</Text>
@@ -308,14 +300,12 @@ export default function AuthScreen({ mode }: AuthScreenProps) {
 
         {/* Footer */}
         <Text style={styles.footer}>
-          City of Melbourne — Parking Enforcement
+          City of Melbourne \u2014 Parking Enforcement
         </Text>
       </ScrollView>
     </KeyboardAvoidingView>
   );
 }
-
-// ─── Styles ───────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
   flex: {

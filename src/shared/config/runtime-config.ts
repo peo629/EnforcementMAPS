@@ -20,20 +20,8 @@ function normalizeBaseUrl(value: string): string {
   return trimmed;
 }
 
-// Resolve once at first call. Env vars are baked in at Metro build time so
-// the value never changes for the lifetime of the process. Lazy evaluation
-// avoids the frozen-null issue documented below while still only computing once.
 let _resolved: { url: string | null; logged: boolean } | null = null;
 
-/**
- * Returns the base URL for API requests, or null if not configured.
- *
- * Intentionally NOT evaluated at module scope — EXPO_PUBLIC_DOMAIN is baked
- * in by Metro at build time, but module-level evaluation can freeze a null
- * value if the module loads before env substitution completes (e.g. running
- * `expo run:android` without the build script). Lazy resolution on first
- * call avoids this.
- */
 export function getApiBaseUrl(): string | null {
   if (IS_WEB) return "";
 

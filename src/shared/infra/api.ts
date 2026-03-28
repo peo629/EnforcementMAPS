@@ -12,11 +12,6 @@ type RequestOptions = {
   headers?: Record<string, string>;
 };
 
-/**
- * Thrown when an API request returns a non-2xx response. The `userMessage`
- * field contains a message safe to show to end users; `technicalDetail`
- * is for developer logging only.
- */
 export class ApiRequestError extends Error {
   readonly userMessage: string;
   readonly technicalDetail?: string;

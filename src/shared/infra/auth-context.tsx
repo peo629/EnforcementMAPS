@@ -6,14 +6,13 @@ import { parseApiResponse } from "./http";
 
 const IS_WEB = Platform.OS === "web";
 
-// ─── IMPORTANT ───────────────────────────────────────────────────────────────
+// \u2500\u2500\u2500 IMPORTANT \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 // API_BASE_URL is intentionally NOT evaluated at module scope.
 // EXPO_PUBLIC_DOMAIN is baked in by Metro at build time, but module-level
 // evaluation can freeze a null value if the module loads before env
-// substitution is complete (e.g. running expo run:android without the
-// build script). Calling getApiBaseUrl() lazily inside each function
-// ensures the resolved value is always used.
-// ─────────────────────────────────────────────────────────────────────────────
+// substitution is complete. Calling getApiBaseUrl() lazily inside each
+// function ensures the resolved value is always used.
+// \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 
 const AUTH_TOKEN_KEY = "patrol_auth_token";
 const HEARTBEAT_INTERVAL_MS = 30_000;
@@ -64,7 +63,6 @@ function presenceRequest(endpoint: string, authToken: string): void {
   }).catch(() => {});
 }
 
-/** Extract the JWT from either response shape the API may return. */
 function extractToken(data: AuthResponse): string | null {
   return data?.session?.token ?? data?.token ?? null;
 }
@@ -136,10 +134,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
         } catch {
           clearTimeout(timeoutId);
-          // Network unavailable or timeout — keep existing token for offline use
         }
       } catch {
-        // SecureStore or other init error — treat as no stored session
+        // SecureStore or other init error
       }
       setLoading(false);
     };
